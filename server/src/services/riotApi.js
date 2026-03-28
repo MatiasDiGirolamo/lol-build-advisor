@@ -1,15 +1,10 @@
 import { PLATFORM_TO_REGION } from "../data/constants.js";
 import { getDDragonData } from "./ddragon.js";
 import { RequestError, requestJson } from "../utils/http.js";
+import { getSanitizedRiotApiKey } from "../utils/env.js";
 
 function getApiKey() {
-  if (!process.env.RIOT_API_KEY) {
-    throw new Error(
-      "Falta RIOT_API_KEY. Riot ID y Spectator requieren una API key oficial.",
-    );
-  }
-
-  return process.env.RIOT_API_KEY;
+  return getSanitizedRiotApiKey();
 }
 
 function normalizePlatform(platform) {

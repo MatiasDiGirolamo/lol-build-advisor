@@ -11,6 +11,7 @@ import { getTierListOverview } from "./services/metaTierProvider.js";
 import { analyzeFromLiveClient } from "./services/liveClientApi.js";
 import { buildRecommendations } from "./services/recommendationEngine.js";
 import { analyzeFromRiotId } from "./services/riotApi.js";
+import { hasValidRiotApiKey } from "./utils/env.js";
 
 const app = express();
 const rateLimitState = new Map();
@@ -95,7 +96,7 @@ app.use((request, response, next) => {
 app.get("/api/health", (_request, response) => {
   response.json({
     ok: true,
-    hasRiotApiKey: Boolean(process.env.RIOT_API_KEY),
+    hasRiotApiKey: hasValidRiotApiKey(),
     hasOpenAiApiKey: Boolean(process.env.OPENAI_API_KEY),
   });
 });
