@@ -74,17 +74,20 @@ function parseRiotIdInput(value) {
   };
 }
 
-function createRiotSearchEntry(riotIdInput, platform) {
-  const trimmedRiotId = String(riotIdInput || "").trim();
+function createRiotSearchEntry(gameName, tagLine, platform) {
+  const trimmedGameName = String(gameName || "").trim();
+  const trimmedTagLine = String(tagLine || "").trim().replace(/^#/, "");
   const trimmedPlatform = String(platform || "").trim().toLowerCase();
 
-  if (!trimmedRiotId || !trimmedPlatform) {
+  if (!trimmedGameName || !trimmedTagLine || !trimmedPlatform) {
     return null;
   }
 
   return {
-    id: `${trimmedRiotId.toLowerCase()}::${trimmedPlatform}`,
-    riotIdInput: trimmedRiotId,
+    id: `${trimmedGameName.toLowerCase()}#${trimmedTagLine.toLowerCase()}::${trimmedPlatform}`,
+    gameName: trimmedGameName,
+    tagLine: trimmedTagLine,
+    riotIdInput: `${trimmedGameName}#${trimmedTagLine}`,
     platform: trimmedPlatform,
   };
 }
@@ -98,7 +101,20 @@ function readStoredSearches(key) {
     const rawValue = window.localStorage.getItem(key);
     const parsedValue = rawValue ? JSON.parse(rawValue) : [];
     return Array.isArray(parsedValue)
-      ? parsedValue.filter((entry) => entry?.riotIdInput && entry?.platform)
+      ? parsedValue
+          .map((entry) => {
+            if (entry?.gameName && entry?.tagLine && entry?.platform) {
+              return createRiotSearchEntry(entry.gameName, entry.tagLine, entry.platform);
+            }
+
+            if (entry?.riotIdInput && entry?.platform) {
+              const parsedEntry = parseRiotIdInput(entry.riotIdInput);
+              return createRiotSearchEntry(parsedEntry.gameName, parsedEntry.tagLine, entry.platform);
+            }
+
+            return null;
+          })
+          .filter(Boolean)
       : [];
   } catch {
     return [];
@@ -747,7 +763,8 @@ function App() {
   const [lastScanAt, setLastScanAt] = useState(null);
   const [viewMode, setViewMode] = useState("draft");
   const [scanHistory, setScanHistory] = useState([]);
-  const [riotIdInput, setRiotIdInput] = useState("");
+  const [riotGameName, setRiotGameName] = useState("");
+  const [riotTagLine, setRiotTagLine] = useState("");
   const [selectedPlatform, setSelectedPlatform] = useState("la2");
   const [liveQuery, setLiveQuery] = useState(null);
   const [recentRiotSearches, setRecentRiotSearches] = useState([]);
@@ -872,14 +889,16 @@ function App() {
 
   async function findLiveGameByRiotId({ silent = false, queryOverride = null } = {}) {
     const query = queryOverride || {
-      riotIdInput,
+      gameName: riotGameName,
+      tagLine: riotTagLine,
       platform: selectedPlatform,
     };
-    const { gameName, tagLine } = parseRiotIdInput(query.riotIdInput);
+    const gameName = String(query.gameName || "").trim();
+    const tagLine = String(query.tagLine || "").trim().replace(/^#/, "");
 
     if (!gameName || !tagLine || !query.platform) {
       if (!silent) {
-        setLiveError("Escribi tu Riot ID completo, por ejemplo `Mati#LAS`, y elegi un servidor.");
+        setLiveError("Escribi tu `game name`, tu `tag line` y elegi un servidor.");
       }
       return;
     }
@@ -912,7 +931,11 @@ function App() {
         setLiveResult(payload);
         setLiveMode(true);
         setLiveError("");
-        setLiveQuery(query);
+        setLiveQuery({
+          gameName,
+          tagLine,
+          platform: query.platform,
+        });
         setLastScanAt(Date.now());
         setViewMode("live");
         setScanHistory((previous) => {
@@ -930,7 +953,7 @@ function App() {
           setSelectedLane(payload.metaBuild.champion.lane);
         }
       });
-      rememberRiotSearch(createRiotSearchEntry(query.riotIdInput, query.platform));
+      rememberRiotSearch(createRiotSearchEntry(gameName, tagLine, query.platform));
     } catch (error) {
       if (!silent) {
         setLiveError(error.message || "No pude leer la partida con Riot API.");
@@ -965,13 +988,13 @@ function App() {
   const liveMetaBuild = liveResult?.metaBuild?.builds?.[0] || null;
   const liveMetaChampion = liveResult?.metaBuild?.champion || null;
   const liveAvailable = liveMode && Boolean(liveResult);
-  const currentRiotSearch = createRiotSearchEntry(riotIdInput, selectedPlatform);
+  const currentRiotSearch = createRiotSearchEntry(riotGameName, riotTagLine, selectedPlatform);
+  const riotLookupQuery = `${riotGameName} ${riotTagLine}`.trim().toLowerCase();
   const favoriteSearchIds = useMemo(
     () => new Set(favoriteRiotSearches.map((entry) => entry.id)),
     [favoriteRiotSearches],
   );
   const riotLookupSuggestions = useMemo(() => {
-    const normalizedQuery = riotIdInput.trim().toLowerCase();
     const mergedEntries = [...favoriteRiotSearches, ...recentRiotSearches];
     const dedupedEntries = mergedEntries.filter(
       (entry, index) => mergedEntries.findIndex((candidate) => candidate.id === entry.id) === index,
@@ -979,24 +1002,27 @@ function App() {
 
     return dedupedEntries
       .filter((entry) => {
-        if (!normalizedQuery) {
+        if (!riotLookupQuery) {
           return true;
         }
 
         return (
-          entry.riotIdInput.toLowerCase().includes(normalizedQuery) ||
-          entry.platform.toLowerCase().includes(normalizedQuery)
+          entry.riotIdInput.toLowerCase().includes(riotLookupQuery) ||
+          entry.gameName.toLowerCase().includes(riotLookupQuery) ||
+          entry.tagLine.toLowerCase().includes(riotLookupQuery) ||
+          entry.platform.toLowerCase().includes(riotLookupQuery)
         );
       })
       .slice(0, 6);
-  }, [favoriteRiotSearches, recentRiotSearches, riotIdInput]);
+  }, [favoriteRiotSearches, recentRiotSearches, riotLookupQuery]);
   const visibleFavoriteSuggestions = useMemo(() => {
     const suggestionIds = new Set(riotLookupSuggestions.map((entry) => entry.id));
     return favoriteRiotSearches.filter((entry) => !suggestionIds.has(entry.id)).slice(0, 4);
   }, [favoriteRiotSearches, riotLookupSuggestions]);
 
   function applyRiotSearchEntry(entry) {
-    setRiotIdInput(entry.riotIdInput);
+    setRiotGameName(entry.gameName);
+    setRiotTagLine(entry.tagLine);
     setSelectedPlatform(entry.platform);
   }
 
@@ -1175,10 +1201,16 @@ function App() {
             }}
           >
             <input
-              className="riot-id-input"
-              placeholder="TuRiotID#LAS"
-              value={riotIdInput}
-              onChange={(event) => setRiotIdInput(event.target.value)}
+              className="riot-name-input"
+              placeholder="Game name"
+              value={riotGameName}
+              onChange={(event) => setRiotGameName(event.target.value)}
+            />
+            <input
+              className="riot-tag-input"
+              placeholder="Tag line"
+              value={riotTagLine}
+              onChange={(event) => setRiotTagLine(event.target.value.replace(/^#/, ""))}
             />
             <select value={selectedPlatform} onChange={(event) => setSelectedPlatform(event.target.value)}>
               {platforms.map((platform) => (

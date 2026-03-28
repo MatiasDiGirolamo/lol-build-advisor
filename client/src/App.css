@@ -76,13 +76,14 @@
 
 .riot-lookup-form {
   display: grid;
-  grid-template-columns: minmax(220px, 1.2fr) minmax(160px, 0.8fr) 48px auto;
+  grid-template-columns: minmax(220px, 1.1fr) minmax(120px, 0.5fr) minmax(160px, 0.75fr) 48px auto;
   gap: 10px;
   align-items: center;
 }
 
 .riot-lookup-form select,
-.riot-id-input {
+.riot-name-input,
+.riot-tag-input {
   width: 100%;
   min-height: 48px;
   padding: 0 14px;
@@ -175,7 +176,8 @@
 }
 
 .riot-lookup-form select:focus,
-.riot-id-input:focus,
+.riot-name-input:focus,
+.riot-tag-input:focus,
 .search-box input:focus {
   outline: none;
   border-color: rgba(211, 176, 106, 0.32);
