@@ -13,9 +13,84 @@ import { buildRecommendations } from "./services/recommendationEngine.js";
 import { analyzeFromRiotId } from "./services/riotApi.js";
 
 const app = express();
+const rateLimitState = new Map();
 
-app.use(cors());
-app.use(express.json());
+function getClientKey(request) {
+  const forwardedFor = request.headers["x-forwarded-for"];
+  if (typeof forwardedFor === "string" && forwardedFor.length) {
+    return forwardedFor.split(",")[0].trim();
+  }
+
+  return request.ip || request.socket?.remoteAddress || "unknown";
+}
+
+function allowOrigin(origin) {
+  if (!origin) {
+    return true;
+  }
+
+  const normalizedOrigin = String(origin).toLowerCase();
+  const allowedOrigins = new Set(
+    [
+      process.env.APP_ORIGIN,
+      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "http://localhost:4173",
+      "http://127.0.0.1:4173",
+    ].filter(Boolean).map((value) => value.toLowerCase()),
+  );
+
+  if (allowedOrigins.has(normalizedOrigin)) {
+    return true;
+  }
+
+  return /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(normalizedOrigin);
+}
+
+function rateLimit({ windowMs, maxRequests }) {
+  return (request, response, next) => {
+    const now = Date.now();
+    const key = `${request.path}:${getClientKey(request)}`;
+    const entry = rateLimitState.get(key);
+
+    if (!entry || now - entry.windowStart >= windowMs) {
+      rateLimitState.set(key, {
+        windowStart: now,
+        count: 1,
+      });
+      next();
+      return;
+    }
+
+    if (entry.count >= maxRequests) {
+      response.status(429).json({
+        message: "Demasiadas requests seguidas. Espera unos segundos y probá de nuevo.",
+      });
+      return;
+    }
+
+    entry.count += 1;
+    next();
+  };
+}
+
+app.disable("x-powered-by");
+app.use(
+  cors({
+    origin(origin, callback) {
+      callback(null, allowOrigin(origin));
+    },
+  }),
+);
+app.use(express.json({ limit: "16kb" }));
+app.use((request, response, next) => {
+  response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.setHeader("X-Content-Type-Options", "nosniff");
+  response.setHeader("X-Frame-Options", "DENY");
+  response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  next();
+});
 
 app.get("/api/health", (_request, response) => {
   response.json({
@@ -29,7 +104,7 @@ app.get("/api/platforms", (_request, response) => {
   response.json(PLATFORM_OPTIONS);
 });
 
-app.get("/api/champions", async (_request, response) => {
+app.get("/api/champions", rateLimit({ windowMs: 60_000, maxRequests: 120 }), async (_request, response) => {
   try {
     const champions = await getChampionCatalog();
     response.json(champions);
@@ -40,7 +115,7 @@ app.get("/api/champions", async (_request, response) => {
   }
 });
 
-app.get("/api/meta/tiers", async (_request, response) => {
+app.get("/api/meta/tiers", rateLimit({ windowMs: 60_000, maxRequests: 90 }), async (_request, response) => {
   try {
     const data = await getTierListOverview();
     response.json(data);
@@ -51,25 +126,35 @@ app.get("/api/meta/tiers", async (_request, response) => {
   }
 });
 
-app.get("/api/champions/:championId/builds", async (request, response) => {
-  try {
-    const lane = request.query.lane ? String(request.query.lane) : null;
-    const data = await getChampionBuildPackage(request.params.championId, lane);
-    response.json(data);
-  } catch (error) {
-    response.status(404).json({
-      message: error.message || "No pude cargar las builds del campeon.",
-    });
-  }
-});
+app.get(
+  "/api/champions/:championId/builds",
+  rateLimit({ windowMs: 60_000, maxRequests: 90 }),
+  async (request, response) => {
+    try {
+      const lane = request.query.lane ? String(request.query.lane) : null;
+      const data = await getChampionBuildPackage(request.params.championId, lane);
+      response.json(data);
+    } catch (error) {
+      response.status(404).json({
+        message: error.message || "No pude cargar las builds del campeon.",
+      });
+    }
+  },
+);
 
-app.post("/api/analyze/riot", async (request, response) => {
+app.post("/api/analyze/riot", rateLimit({ windowMs: 60_000, maxRequests: 30 }), async (request, response) => {
   try {
     const { gameName, tagLine, platform } = request.body || {};
 
-    if (!gameName || !tagLine || !platform) {
+    if (
+      !gameName ||
+      !tagLine ||
+      !platform ||
+      String(gameName).length > 32 ||
+      String(tagLine).length > 10
+    ) {
       response.status(400).json({
-        message: "Necesito gameName, tagLine y platform.",
+        message: "Necesito gameName, tagLine y platform validos.",
       });
       return;
     }
@@ -106,7 +191,7 @@ app.post("/api/analyze/riot", async (request, response) => {
   }
 });
 
-app.post("/api/analyze/live-client", async (_request, response) => {
+app.post("/api/analyze/live-client", rateLimit({ windowMs: 60_000, maxRequests: 30 }), async (_request, response) => {
   try {
     const snapshot = await analyzeFromLiveClient();
     const metaBuild = await getChampionBuildPackage(snapshot.player.championName).catch(

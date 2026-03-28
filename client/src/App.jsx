@@ -13,9 +13,13 @@ async function requestJson(url, options) {
     try {
       payload = JSON.parse(text);
     } catch {
+      const normalizedText = text.trim();
+
       throw new Error(
-        text.includes("<!doctype")
+        normalizedText.includes("<!doctype")
           ? "La app recibio HTML en lugar de JSON. Proba con Ctrl+F5 para refrescar la deploy nueva."
+          : normalizedText.startsWith("The deploy")
+            ? "La deploy de Vercel todavia se esta acomodando. Refresca en unos segundos."
           : "El servidor devolvio una respuesta invalida.",
       );
     }
@@ -676,6 +680,7 @@ function App() {
     const controller = new AbortController();
     setBuildLoading(true);
     setBuildError("");
+    setBuildPackage(null);
 
     requestJson(`/api/champions/${selectedChampionId}/builds?lane=${encodeURIComponent(selectedLane)}`, {
       signal: controller.signal,
@@ -690,6 +695,7 @@ function App() {
         if (error.name === "AbortError") {
           return;
         }
+        setBuildPackage(null);
         setBuildError(error.message || "No pude cargar la build.");
       })
       .finally(() => {
@@ -721,8 +727,16 @@ function App() {
     });
   }, [champions, deferredSearch]);
 
-  const selectedChampion = buildPackage?.champion || championMap.get(selectedChampionId);
-  const activeBuild = buildPackage?.builds?.[activeBuildIndex] || null;
+  const selectedChampionBase = championMap.get(selectedChampionId) || null;
+  const currentBuildPackage =
+    buildPackage?.champion?.id === selectedChampionId ? buildPackage : null;
+  const selectedChampion = currentBuildPackage?.champion
+    ? {
+        ...selectedChampionBase,
+        ...currentBuildPackage.champion,
+      }
+    : selectedChampionBase;
+  const activeBuild = currentBuildPackage?.builds?.[activeBuildIndex] || null;
   const liveAllies = liveResult?.participants?.filter((participant) => participant.relation === "ALLY") || [];
   const liveEnemies = liveResult?.participants?.filter((participant) => participant.relation === "ENEMY") || [];
 
@@ -1060,17 +1074,17 @@ function App() {
                 </div>
               </div>
 
-              <RoleTabs roles={selectedChampion?.roles || buildPackage?.champion?.roles} selectedLane={selectedLane} onChange={setSelectedLane} />
+              <RoleTabs roles={selectedChampion?.roles || currentBuildPackage?.champion?.roles} selectedLane={selectedLane} onChange={setSelectedLane} />
             </div>
           </section>
 
           {buildError ? <div className="feedback-banner error">{buildError}</div> : null}
           {buildLoading ? <div className="feedback-banner">Loading build...</div> : null}
 
-          {buildPackage && activeBuild ? (
+          {currentBuildPackage && activeBuild ? (
             <>
               <BuildTabs
-                builds={buildPackage.builds}
+                builds={currentBuildPackage.builds}
                 activeBuildIndex={activeBuildIndex}
                 onChange={setActiveBuildIndex}
               />
@@ -1087,7 +1101,7 @@ function App() {
                       <div className="hero-build-stats">
                         <div>
                           <small>Tier</small>
-                          <strong>{buildPackage.champion.tier || "-"}</strong>
+                          <strong>{currentBuildPackage.champion.tier || "-"}</strong>
                         </div>
                         <div>
                           <small>WR</small>
@@ -1099,7 +1113,7 @@ function App() {
                         </div>
                         <div>
                           <small>Patch</small>
-                          <strong>{buildPackage.source?.patch || "-"}</strong>
+                          <strong>{currentBuildPackage.source?.patch || "-"}</strong>
                         </div>
                       </div>
                     </section>
@@ -1113,8 +1127,8 @@ function App() {
                 <div className="pregame-bottom">
                   <ItemizationBoard build={activeBuild} />
                   <SkillOrderCard skills={activeBuild.skillOrder} />
-                  <CounterRow title="Weak Against" entries={buildPackage.counters?.weakAgainst} tone="danger" />
-                  <CounterRow title="Strong Against" entries={buildPackage.counters?.strongAgainst} tone="good" />
+                  <CounterRow title="Weak Against" entries={currentBuildPackage.counters?.weakAgainst} tone="danger" />
+                  <CounterRow title="Strong Against" entries={currentBuildPackage.counters?.strongAgainst} tone="good" />
                 </div>
               </section>
             </>
