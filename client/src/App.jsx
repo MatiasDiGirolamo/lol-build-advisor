@@ -3,6 +3,10 @@ import "./App.css";
 
 const ROLE_ORDER = ["Top", "Jungle", "Mid", "Bot", "Support"];
 const LIVE_HISTORY_LIMIT = 8;
+const RECENT_RIOT_SEARCHES_KEY = "lol-build-advisor:recent-riot-searches";
+const FAVORITE_RIOT_SEARCHES_KEY = "lol-build-advisor:favorite-riot-searches";
+const MAX_RECENT_RIOT_SEARCHES = 8;
+const MAX_FAVORITE_RIOT_SEARCHES = 6;
 
 async function requestJson(url, options) {
   const response = await fetch(url, options);
@@ -68,6 +72,53 @@ function parseRiotIdInput(value) {
     gameName: gameNamePart.trim(),
     tagLine: tagParts.join("#").trim(),
   };
+}
+
+function createRiotSearchEntry(riotIdInput, platform) {
+  const trimmedRiotId = String(riotIdInput || "").trim();
+  const trimmedPlatform = String(platform || "").trim().toLowerCase();
+
+  if (!trimmedRiotId || !trimmedPlatform) {
+    return null;
+  }
+
+  return {
+    id: `${trimmedRiotId.toLowerCase()}::${trimmedPlatform}`,
+    riotIdInput: trimmedRiotId,
+    platform: trimmedPlatform,
+  };
+}
+
+function readStoredSearches(key) {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(key);
+    const parsedValue = rawValue ? JSON.parse(rawValue) : [];
+    return Array.isArray(parsedValue)
+      ? parsedValue.filter((entry) => entry?.riotIdInput && entry?.platform)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredSearches(key, entries) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(key, JSON.stringify(entries));
+}
+
+function upsertSearchEntry(entries, candidate, limit) {
+  if (!candidate) {
+    return entries;
+  }
+
+  return [candidate, ...entries.filter((entry) => entry.id !== candidate.id)].slice(0, limit);
 }
 
 function getFeaturedLaneEntries(entries) {
@@ -612,6 +663,70 @@ function ModeTabs({ viewMode, liveAvailable, onChange }) {
   );
 }
 
+function RiotLookupSuggestions({
+  suggestions,
+  favorites,
+  selectedId,
+  onSelect,
+  onToggleFavorite,
+}) {
+  if (!suggestions.length && !favorites.length) {
+    return null;
+  }
+
+  return (
+    <div className="riot-suggestions-shell">
+      {suggestions.length ? (
+        <div className="riot-suggestion-group">
+          <span className="riot-suggestion-label">Suggestions</span>
+          <div className="riot-suggestion-row">
+            {suggestions.map((entry) => (
+              <button
+                key={`suggestion-${entry.id}`}
+                className={`riot-suggestion-chip ${selectedId === entry.id ? "is-active" : ""}`}
+                type="button"
+                onClick={() => onSelect(entry)}
+              >
+                <strong>{entry.riotIdInput}</strong>
+                <small>{entry.platform.toUpperCase()}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {favorites.length ? (
+        <div className="riot-suggestion-group">
+          <span className="riot-suggestion-label">Favorites</span>
+          <div className="riot-suggestion-row">
+            {favorites.map((entry) => (
+              <div className="riot-favorite-card" key={`favorite-${entry.id}`}>
+                <button
+                  className={`riot-suggestion-chip ${selectedId === entry.id ? "is-active" : ""}`}
+                  type="button"
+                  onClick={() => onSelect(entry)}
+                >
+                  <strong>{entry.riotIdInput}</strong>
+                  <small>{entry.platform.toUpperCase()}</small>
+                </button>
+                <button
+                  className="riot-favorite-toggle is-active"
+                  type="button"
+                  onClick={() => onToggleFavorite(entry)}
+                  aria-label={`Quitar ${entry.riotIdInput} de favoritos`}
+                  title="Quitar de favoritos"
+                >
+                  ★
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function App() {
   const [champions, setChampions] = useState([]);
   const [platforms, setPlatforms] = useState([]);
@@ -635,8 +750,23 @@ function App() {
   const [riotIdInput, setRiotIdInput] = useState("");
   const [selectedPlatform, setSelectedPlatform] = useState("la2");
   const [liveQuery, setLiveQuery] = useState(null);
+  const [recentRiotSearches, setRecentRiotSearches] = useState([]);
+  const [favoriteRiotSearches, setFavoriteRiotSearches] = useState([]);
 
   const deferredSearch = useDeferredValue(search);
+
+  useEffect(() => {
+    setRecentRiotSearches(readStoredSearches(RECENT_RIOT_SEARCHES_KEY));
+    setFavoriteRiotSearches(readStoredSearches(FAVORITE_RIOT_SEARCHES_KEY));
+  }, []);
+
+  useEffect(() => {
+    writeStoredSearches(RECENT_RIOT_SEARCHES_KEY, recentRiotSearches);
+  }, [recentRiotSearches]);
+
+  useEffect(() => {
+    writeStoredSearches(FAVORITE_RIOT_SEARCHES_KEY, favoriteRiotSearches);
+  }, [favoriteRiotSearches]);
 
   useEffect(() => {
     Promise.all([
@@ -800,6 +930,7 @@ function App() {
           setSelectedLane(payload.metaBuild.champion.lane);
         }
       });
+      rememberRiotSearch(createRiotSearchEntry(query.riotIdInput, query.platform));
     } catch (error) {
       if (!silent) {
         setLiveError(error.message || "No pude leer la partida con Riot API.");
@@ -834,6 +965,67 @@ function App() {
   const liveMetaBuild = liveResult?.metaBuild?.builds?.[0] || null;
   const liveMetaChampion = liveResult?.metaBuild?.champion || null;
   const liveAvailable = liveMode && Boolean(liveResult);
+  const currentRiotSearch = createRiotSearchEntry(riotIdInput, selectedPlatform);
+  const favoriteSearchIds = useMemo(
+    () => new Set(favoriteRiotSearches.map((entry) => entry.id)),
+    [favoriteRiotSearches],
+  );
+  const riotLookupSuggestions = useMemo(() => {
+    const normalizedQuery = riotIdInput.trim().toLowerCase();
+    const mergedEntries = [...favoriteRiotSearches, ...recentRiotSearches];
+    const dedupedEntries = mergedEntries.filter(
+      (entry, index) => mergedEntries.findIndex((candidate) => candidate.id === entry.id) === index,
+    );
+
+    return dedupedEntries
+      .filter((entry) => {
+        if (!normalizedQuery) {
+          return true;
+        }
+
+        return (
+          entry.riotIdInput.toLowerCase().includes(normalizedQuery) ||
+          entry.platform.toLowerCase().includes(normalizedQuery)
+        );
+      })
+      .slice(0, 6);
+  }, [favoriteRiotSearches, recentRiotSearches, riotIdInput]);
+  const visibleFavoriteSuggestions = useMemo(() => {
+    const suggestionIds = new Set(riotLookupSuggestions.map((entry) => entry.id));
+    return favoriteRiotSearches.filter((entry) => !suggestionIds.has(entry.id)).slice(0, 4);
+  }, [favoriteRiotSearches, riotLookupSuggestions]);
+
+  function applyRiotSearchEntry(entry) {
+    setRiotIdInput(entry.riotIdInput);
+    setSelectedPlatform(entry.platform);
+  }
+
+  function rememberRiotSearch(entry) {
+    if (!entry) {
+      return;
+    }
+
+    setRecentRiotSearches((currentEntries) =>
+      upsertSearchEntry(currentEntries, entry, MAX_RECENT_RIOT_SEARCHES),
+    );
+  }
+
+  function toggleFavoriteRiotSearch(entry = currentRiotSearch) {
+    if (!entry) {
+      return;
+    }
+
+    setFavoriteRiotSearches((currentEntries) => {
+      const alreadyFavorite = currentEntries.some((currentEntry) => currentEntry.id === entry.id);
+
+      if (alreadyFavorite) {
+        return currentEntries.filter((currentEntry) => currentEntry.id !== entry.id);
+      }
+
+      return upsertSearchEntry(currentEntries, entry, MAX_FAVORITE_RIOT_SEARCHES);
+    });
+    rememberRiotSearch(entry);
+  }
 
   if (viewMode === "live" && liveAvailable) {
     return (
@@ -995,12 +1187,30 @@ function App() {
                 </option>
               ))}
             </select>
+            <button
+              className={`riot-favorite-toggle ${currentRiotSearch && favoriteSearchIds.has(currentRiotSearch.id) ? "is-active" : ""}`}
+              type="button"
+              onClick={() => toggleFavoriteRiotSearch()}
+              disabled={!currentRiotSearch}
+              aria-label="Guardar Riot ID en favoritos"
+              title="Guardar Riot ID en favoritos"
+            >
+              ★
+            </button>
             <button className="primary-button" type="submit" disabled={liveLoading}>
               {liveLoading ? "Buscando..." : "Find live game"}
             </button>
           </form>
         </div>
       </section>
+
+      <RiotLookupSuggestions
+        suggestions={riotLookupSuggestions}
+        favorites={visibleFavoriteSuggestions}
+        selectedId={currentRiotSearch?.id || ""}
+        onSelect={applyRiotSearchEntry}
+        onToggleFavorite={toggleFavoriteRiotSearch}
+      />
 
       {liveError ? <div className="feedback-banner error">{liveError}</div> : null}
       {tierError ? <div className="feedback-banner">{tierError}</div> : null}
