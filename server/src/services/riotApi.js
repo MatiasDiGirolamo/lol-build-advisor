@@ -47,6 +47,20 @@ async function getSummonerByPuuid(platform, puuid) {
   );
 }
 
+async function getSummonerByAccountId(platform, accountId) {
+  return riotGet(
+    `${normalizePlatform(platform)}.api.riotgames.com`,
+    `/lol/summoner/v4/summoners/by-account/${encodeURIComponent(accountId)}`,
+  );
+}
+
+async function getSummonerByName(platform, summonerName) {
+  return riotGet(
+    `${normalizePlatform(platform)}.api.riotgames.com`,
+    `/lol/summoner/v4/summoners/by-name/${encodeURIComponent(summonerName)}`,
+  );
+}
+
 async function getActiveGameBySummoner(platform, summonerId) {
   return riotGet(
     `${normalizePlatform(platform)}.api.riotgames.com`,
@@ -104,17 +118,72 @@ function getEncryptedSummonerId(summoner) {
   );
 }
 
+async function resolveLeagueSummoner(platform, account, fallbackName) {
+  let puuidLookup = null;
+
+  try {
+    puuidLookup = await getSummonerByPuuid(platform, account.puuid);
+    if (getEncryptedSummonerId(puuidLookup)) {
+      return puuidLookup;
+    }
+  } catch (error) {
+    if (!(error instanceof RequestError && error.status === 404)) {
+      throw error;
+    }
+  }
+
+  const accountId =
+    puuidLookup?.accountId ||
+    puuidLookup?.encryptedAccountId ||
+    null;
+
+  if (accountId) {
+    try {
+      const accountLookup = await getSummonerByAccountId(platform, accountId);
+      if (getEncryptedSummonerId(accountLookup)) {
+        return accountLookup;
+      }
+    } catch (error) {
+      if (!(error instanceof RequestError && error.status === 404)) {
+        throw error;
+      }
+    }
+  }
+
+  if (fallbackName) {
+    try {
+      const nameLookup = await getSummonerByName(platform, fallbackName);
+      if (
+        getEncryptedSummonerId(nameLookup) &&
+        (!nameLookup?.puuid || nameLookup.puuid === account.puuid)
+      ) {
+        return nameLookup;
+      }
+    } catch (error) {
+      if (!(error instanceof RequestError && error.status === 404)) {
+        throw error;
+      }
+    }
+  }
+
+  return puuidLookup;
+}
+
 export async function analyzeFromRiotId({ gameName, tagLine, platform }) {
   const normalizedPlatform = normalizePlatform(platform);
   const { championsByKey } = await getDDragonData();
 
   const account = await getAccountByRiotId(normalizedPlatform, gameName, tagLine);
-  const summoner = await getSummonerByPuuid(normalizedPlatform, account.puuid);
+  const summoner = await resolveLeagueSummoner(
+    normalizedPlatform,
+    account,
+    account.gameName || gameName,
+  );
   const encryptedSummonerId = getEncryptedSummonerId(summoner);
 
   if (!encryptedSummonerId) {
     throw new Error(
-      "Riot encontro la cuenta, pero no devolvio un Summoner ID valido para League en ese servidor. Verifica que el Riot ID juegue LoL en esa region y volve a probar.",
+      "Riot encontro la cuenta, pero no pude resolver un perfil valido de League en ese servidor ni con fallback por cuenta o nombre. Verifica Riot ID, servidor y que esa cuenta tenga un perfil de LoL activo.",
     );
   }
 
