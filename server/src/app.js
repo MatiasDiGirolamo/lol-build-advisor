@@ -23,6 +23,10 @@ function getPublicErrorMessage(error, fallbackMessage) {
       return "Riot rechazo la API key. En el portal de Riot genera una dev key nueva y pegala otra vez en Vercel. Las development keys vencen cada 24 horas.";
     }
 
+    if (error.status === 400) {
+      return "Riot rechazo la consulta actual. Revisa Riot ID, tag, servidor y que esa cuenta tenga perfil de League activo en esa region.";
+    }
+
     if (error.status === 404) {
       return "No encontre ese recurso en Riot API. Revisa Riot ID, tag y servidor.";
     }

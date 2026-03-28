@@ -95,16 +95,32 @@ function getParticipantName(participant) {
   return participant.summonerName || "Jugador";
 }
 
+function getEncryptedSummonerId(summoner) {
+  return (
+    summoner?.id ||
+    summoner?.summonerId ||
+    summoner?.encryptedSummonerId ||
+    null
+  );
+}
+
 export async function analyzeFromRiotId({ gameName, tagLine, platform }) {
   const normalizedPlatform = normalizePlatform(platform);
   const { championsByKey } = await getDDragonData();
 
   const account = await getAccountByRiotId(normalizedPlatform, gameName, tagLine);
   const summoner = await getSummonerByPuuid(normalizedPlatform, account.puuid);
+  const encryptedSummonerId = getEncryptedSummonerId(summoner);
+
+  if (!encryptedSummonerId) {
+    throw new Error(
+      "Riot encontro la cuenta, pero no devolvio un Summoner ID valido para League en ese servidor. Verifica que el Riot ID juegue LoL en esa region y volve a probar.",
+    );
+  }
 
   let activeGame;
   try {
-    activeGame = await getActiveGameBySummoner(normalizedPlatform, summoner.id);
+    activeGame = await getActiveGameBySummoner(normalizedPlatform, encryptedSummonerId);
   } catch (error) {
     if (error instanceof RequestError && error.status === 404) {
       return {
@@ -118,7 +134,7 @@ export async function analyzeFromRiotId({ gameName, tagLine, platform }) {
   }
 
   const currentParticipant =
-    activeGame.participants.find((participant) => participant.summonerId === summoner.id) ||
+    activeGame.participants.find((participant) => participant.summonerId === encryptedSummonerId) ||
     activeGame.participants.find(
       (participant) =>
         participant.riotId === `${account.gameName}#${account.tagLine}` ||
@@ -141,7 +157,7 @@ export async function analyzeFromRiotId({ gameName, tagLine, platform }) {
 
       return {
         name: getParticipantName(participant),
-        isCurrentPlayer: participant.summonerId === summoner.id,
+        isCurrentPlayer: participant.summonerId === encryptedSummonerId,
         teamId: participant.teamId,
         relation:
           participant.teamId === currentParticipant?.teamId ? "ALLY" : "ENEMY",
