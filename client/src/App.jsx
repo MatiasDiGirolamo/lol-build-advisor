@@ -292,6 +292,7 @@ function MiniIconGrid({ title, entries }) {
 function App() {
   const [champions, setChampions] = useState([]);
   const [platforms, setPlatforms] = useState([]);
+  const [healthData, setHealthData] = useState(null);
   const [tierOverview, setTierOverview] = useState(null);
   const [tierError, setTierError] = useState("");
   const [viewMode, setViewMode] = useState("home");
@@ -328,12 +329,13 @@ function App() {
   useEffect(() => writeStoredSearches(FAVORITE_RIOT_SEARCHES_KEY, favoriteRiotSearches), [favoriteRiotSearches]);
 
   useEffect(() => {
-    Promise.all([requestJson("/api/champions"), requestJson("/api/meta/tiers"), requestJson("/api/platforms")])
-      .then(([championData, tierData, platformData]) => {
+    Promise.all([requestJson("/api/champions"), requestJson("/api/meta/tiers"), requestJson("/api/platforms"), requestJson("/api/health")])
+      .then(([championData, tierData, platformData, healthPayload]) => {
         startTransition(() => {
           setChampions(Array.isArray(championData) ? championData : []);
           setTierOverview(tierData?.roles ? tierData : null);
           setPlatforms(Array.isArray(platformData) ? platformData : []);
+          setHealthData(healthPayload || null);
           const defaultChampion = (Array.isArray(championData) ? championData : []).find((entry) => entry.id === "Ahri") || championData?.[0];
           setSelectedChampionId(defaultChampion?.id || "");
           setSelectedLane(defaultChampion?.roles?.[0]?.lane || defaultChampion?.lane || "Mid");
@@ -588,6 +590,12 @@ function App() {
         onSelect={applyRiotSearchEntry}
         onToggleFavorite={toggleFavoriteRiotSearch}
       />
+
+      {healthData ? (
+        <div className="feedback-banner diagnostic-banner">
+          Deploy {healthData.deployment?.env || "-"} · commit {healthData.deployment?.commit || "-"} · Riot key fp {healthData.riotKeyFingerprint || "missing"}
+        </div>
+      ) : null}
 
       {profileError ? <div className="feedback-banner error">{profileError}</div> : null}
       {liveError ? <div className="feedback-banner error">{liveError}</div> : null}

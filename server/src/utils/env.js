@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+
 function sanitizeEnvValue(value) {
   if (typeof value !== "string") {
     return "";
@@ -32,5 +34,14 @@ export function hasValidRiotApiKey() {
     return Boolean(getSanitizedRiotApiKey());
   } catch {
     return false;
+  }
+}
+
+export function getRiotApiKeyFingerprint() {
+  try {
+    const key = getSanitizedRiotApiKey();
+    return crypto.createHash("sha256").update(key).digest("hex").slice(0, 10);
+  } catch {
+    return null;
   }
 }

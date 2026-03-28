@@ -293,6 +293,12 @@
   color: #ffd0d0;
 }
 
+.diagnostic-banner {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.76rem;
+  color: rgba(243, 236, 222, 0.66);
+}
+
 .tier-board {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

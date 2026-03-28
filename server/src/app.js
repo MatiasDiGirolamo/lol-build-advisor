@@ -11,7 +11,7 @@ import { getTierListOverview } from "./services/metaTierProvider.js";
 import { analyzeFromLiveClient } from "./services/liveClientApi.js";
 import { buildRecommendations } from "./services/recommendationEngine.js";
 import { analyzeFromRiotId, getPlayerProfileByRiotId } from "./services/riotApi.js";
-import { hasValidRiotApiKey } from "./utils/env.js";
+import { getRiotApiKeyFingerprint, hasValidRiotApiKey } from "./utils/env.js";
 import { RequestError } from "./utils/http.js";
 
 const app = express();
@@ -120,7 +120,14 @@ app.get("/api/health", (_request, response) => {
   response.json({
     ok: true,
     hasRiotApiKey: hasValidRiotApiKey(),
+    riotKeyFingerprint: getRiotApiKeyFingerprint(),
     hasOpenAiApiKey: Boolean(process.env.OPENAI_API_KEY),
+    deployment: {
+      env: process.env.VERCEL_ENV || "local",
+      url: process.env.VERCEL_URL || null,
+      commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "local",
+      branch: process.env.VERCEL_GIT_COMMIT_REF || "local",
+    },
   });
 });
 
