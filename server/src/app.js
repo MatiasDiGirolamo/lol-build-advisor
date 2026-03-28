@@ -12,9 +12,28 @@ import { analyzeFromLiveClient } from "./services/liveClientApi.js";
 import { buildRecommendations } from "./services/recommendationEngine.js";
 import { analyzeFromRiotId } from "./services/riotApi.js";
 import { hasValidRiotApiKey } from "./utils/env.js";
+import { RequestError } from "./utils/http.js";
 
 const app = express();
 const rateLimitState = new Map();
+
+function getPublicErrorMessage(error, fallbackMessage) {
+  if (error instanceof RequestError) {
+    if (error.status === 401 || error.status === 403) {
+      return "Riot rechazo la API key. En el portal de Riot genera una dev key nueva y pegala otra vez en Vercel. Las development keys vencen cada 24 horas.";
+    }
+
+    if (error.status === 404) {
+      return "No encontre ese recurso en Riot API. Revisa Riot ID, tag y servidor.";
+    }
+
+    if (error.status === 429) {
+      return "Riot API esta rate-limited ahora. Espera un momento y volve a probar.";
+    }
+  }
+
+  return error?.message || fallbackMessage;
+}
 
 function getClientKey(request) {
   const forwardedFor = request.headers["x-forwarded-for"];
@@ -122,7 +141,7 @@ app.get("/api/meta/tiers", rateLimit({ windowMs: 60_000, maxRequests: 90 }), asy
     response.json(data);
   } catch (error) {
     response.status(500).json({
-      message: error.message || "No pude cargar la tier list actual.",
+      message: getPublicErrorMessage(error, "No pude cargar la tier list actual."),
     });
   }
 });
@@ -137,7 +156,7 @@ app.get(
       response.json(data);
     } catch (error) {
       response.status(404).json({
-        message: error.message || "No pude cargar las builds del campeon.",
+        message: getPublicErrorMessage(error, "No pude cargar las builds del campeon."),
       });
     }
   },
@@ -187,7 +206,7 @@ app.post("/api/analyze/riot", rateLimit({ windowMs: 60_000, maxRequests: 30 }), 
     });
   } catch (error) {
     response.status(500).json({
-      message: error.message || "No pude analizar la partida con Riot API.",
+      message: getPublicErrorMessage(error, "No pude analizar la partida con Riot API."),
     });
   }
 });
@@ -212,9 +231,10 @@ app.post("/api/analyze/live-client", rateLimit({ windowMs: 60_000, maxRequests: 
     });
   } catch (error) {
     response.status(500).json({
-      message:
-        error.message ||
+      message: getPublicErrorMessage(
+        error,
         "No pude leer la partida local. Asegurate de tener una partida activa abierta.",
+      ),
     });
   }
 });
