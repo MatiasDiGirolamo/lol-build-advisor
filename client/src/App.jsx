@@ -4,6 +4,30 @@ import "./App.css";
 const ROLE_ORDER = ["Top", "Jungle", "Mid", "Bot", "Support"];
 const LIVE_HISTORY_LIMIT = 8;
 
+async function requestJson(url, options) {
+  const response = await fetch(url, options);
+  const text = await response.text();
+  let payload = {};
+
+  if (text) {
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      throw new Error(
+        text.includes("<!doctype")
+          ? "La app recibio HTML en lugar de JSON. Proba con Ctrl+F5 para refrescar la deploy nueva."
+          : "El servidor devolvio una respuesta invalida.",
+      );
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(payload.message || "No pude completar la solicitud.");
+  }
+
+  return payload;
+}
+
 function formatGameLength(seconds) {
   if (!seconds) {
     return "0:00";
@@ -32,6 +56,14 @@ function getStateClassName(value) {
   }
 
   return "is-even";
+}
+
+function parseRiotIdInput(value) {
+  const [gameNamePart, ...tagParts] = String(value || "").split("#");
+  return {
+    gameName: gameNamePart.trim(),
+    tagLine: tagParts.join("#").trim(),
+  };
 }
 
 function getFeaturedLaneEntries(entries) {
@@ -528,20 +560,24 @@ function LiveRoster({ title, players, championMap, tone }) {
                 {champion?.squareUrl ? <img src={champion.squareUrl} alt={player.championName} loading="lazy" /> : null}
                 <div>
                   <strong>{player.championName}</strong>
-                  <span>{player.scoreLine}</span>
+                  <span>{player.scoreLine || player.rank || "Live read"}</span>
                 </div>
               </div>
-              <div className="mini-item-row">
-                {(player.items || []).map((item) => (
-                  <img
-                    key={`${player.name}-${item.id}`}
-                    src={item.iconUrl}
-                    alt={item.name}
-                    title={item.name}
-                    loading="lazy"
-                  />
-                ))}
-              </div>
+              {(player.items || []).length ? (
+                <div className="mini-item-row">
+                  {(player.items || []).map((item) =>
+                    item.iconUrl ? (
+                      <img
+                        key={`${player.name}-${item.id}`}
+                        src={item.iconUrl}
+                        alt={item.name}
+                        title={item.name}
+                        loading="lazy"
+                      />
+                    ) : null,
+                  )}
+                </div>
+              ) : null}
             </article>
           );
         })}
@@ -574,6 +610,7 @@ function ModeTabs({ viewMode, liveAvailable, onChange }) {
 
 function App() {
   const [champions, setChampions] = useState([]);
+  const [platforms, setPlatforms] = useState([]);
   const [selectedChampionId, setSelectedChampionId] = useState("");
   const [selectedLane, setSelectedLane] = useState("");
   const [buildPackage, setBuildPackage] = useState(null);
@@ -591,21 +628,31 @@ function App() {
   const [lastScanAt, setLastScanAt] = useState(null);
   const [viewMode, setViewMode] = useState("draft");
   const [scanHistory, setScanHistory] = useState([]);
+  const [riotIdInput, setRiotIdInput] = useState("");
+  const [selectedPlatform, setSelectedPlatform] = useState("la2");
+  const [liveQuery, setLiveQuery] = useState(null);
 
   const deferredSearch = useDeferredValue(search);
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/champions").then((response) => response.json()),
-      fetch("/api/meta/tiers").then((response) => response.json()),
+      requestJson("/api/champions"),
+      requestJson("/api/meta/tiers"),
+      requestJson("/api/platforms"),
     ])
-      .then(([championData, tierData]) => {
+      .then(([championData, tierData, platformData]) => {
         if (!Array.isArray(championData)) {
           throw new Error("Champion catalog unavailable.");
         }
 
         startTransition(() => {
           setChampions(championData);
+          if (Array.isArray(platformData)) {
+            setPlatforms(platformData);
+            if (platformData[0]?.value) {
+              setSelectedPlatform((current) => current || platformData[0].value);
+            }
+          }
           if (tierData?.roles) {
             setTierOverview(tierData);
           }
@@ -630,15 +677,10 @@ function App() {
     setBuildLoading(true);
     setBuildError("");
 
-    fetch(`/api/champions/${selectedChampionId}/builds?lane=${encodeURIComponent(selectedLane)}`, {
+    requestJson(`/api/champions/${selectedChampionId}/builds?lane=${encodeURIComponent(selectedLane)}`, {
       signal: controller.signal,
     })
-      .then((response) => response.json().then((payload) => ({ response, payload })))
-      .then(({ response, payload }) => {
-        if (!response.ok) {
-          throw new Error(payload.message || "No pude cargar la build.");
-        }
-
+      .then((payload) => {
         startTransition(() => {
           setBuildPackage(payload);
           setActiveBuildIndex(0);
@@ -684,28 +726,49 @@ function App() {
   const liveAllies = liveResult?.participants?.filter((participant) => participant.relation === "ALLY") || [];
   const liveEnemies = liveResult?.participants?.filter((participant) => participant.relation === "ENEMY") || [];
 
-  async function scanLiveGame({ silent = false } = {}) {
+  async function findLiveGameByRiotId({ silent = false, queryOverride = null } = {}) {
+    const query = queryOverride || {
+      riotIdInput,
+      platform: selectedPlatform,
+    };
+    const { gameName, tagLine } = parseRiotIdInput(query.riotIdInput);
+
+    if (!gameName || !tagLine || !query.platform) {
+      if (!silent) {
+        setLiveError("Escribi tu Riot ID completo, por ejemplo `Mati#LAS`, y elegi un servidor.");
+      }
+      return;
+    }
+
     setLiveLoading(true);
     if (!silent) {
       setLiveError("");
     }
 
     try {
-      const response = await fetch("/api/analyze/live-client", {
+      const payload = await requestJson("/api/analyze/riot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          gameName,
+          tagLine,
+          platform: query.platform,
+        }),
       });
-      const payload = await response.json();
 
-      if (!response.ok) {
-        throw new Error(payload.message || "No pude leer la partida local.");
+      if (!payload.found) {
+        setLiveResult(null);
+        setLiveMode(false);
+        setViewMode("draft");
+        setLiveError(payload.message || "No encontre una partida activa para ese Riot ID.");
+        return;
       }
 
       startTransition(() => {
         setLiveResult(payload);
         setLiveMode(true);
         setLiveError("");
+        setLiveQuery(query);
         setLastScanAt(Date.now());
         setViewMode("live");
         setScanHistory((previous) => {
@@ -725,8 +788,9 @@ function App() {
       });
     } catch (error) {
       if (!silent) {
-        setLiveError(error.message || "No pude leer la partida local.");
+        setLiveError(error.message || "No pude leer la partida con Riot API.");
       } else if (liveMode) {
+        setLiveResult(null);
         setLiveMode(false);
         setViewMode("draft");
       }
@@ -736,20 +800,16 @@ function App() {
   }
 
   useEffect(() => {
-    scanLiveGame({ silent: true });
-  }, []);
-
-  useEffect(() => {
-    if (!liveMode) {
+    if (!liveMode || !liveQuery) {
       return;
     }
 
     const intervalId = window.setInterval(() => {
-      scanLiveGame({ silent: true });
+      findLiveGameByRiotId({ silent: true, queryOverride: liveQuery });
     }, liveResult?.refreshIntervalMs || 120000);
 
     return () => window.clearInterval(intervalId);
-  }, [liveMode, liveResult?.refreshIntervalMs]);
+  }, [liveMode, liveResult?.refreshIntervalMs, liveQuery]);
 
   function handleChampionSelect(championId) {
     const champion = championMap.get(championId);
@@ -772,6 +832,7 @@ function App() {
             <h1>{liveResult.player.championName}</h1>
             <div className="live-stat-bar">
               <span>{formatGameLength(liveResult.game.gameLengthSeconds)}</span>
+              <span>{liveResult.modeLabel || "Live read"}</span>
               <span>{liveResult.analysis.playerRole}</span>
               {liveResult.analysis.gameState?.statusLabel ? (
                 <span className={`state-pill ${getStateClassName(liveResult.analysis.gameState.statusLabel)}`}>
@@ -784,13 +845,18 @@ function App() {
           </div>
 
           <div className="live-actions">
-            <button className="primary-button" type="button" onClick={() => scanLiveGame()} disabled={liveLoading}>
-              {liveLoading ? "Updating..." : "Refresh now"}
+            <button className="primary-button" type="button" onClick={() => findLiveGameByRiotId()} disabled={liveLoading}>
+              {liveLoading ? "Updating..." : "Refresh Riot read"}
             </button>
           </div>
         </section>
 
         {liveError ? <div className="feedback-banner error">{liveError}</div> : null}
+        {liveResult.limitations?.length ? (
+          <div className="feedback-banner">
+            {liveResult.limitations[0]}
+          </div>
+        ) : null}
 
         <section className="live-grid">
           <section className="glass-card focus-panel compact-live-panel">
@@ -890,14 +956,35 @@ function App() {
           <h1>Meta by role, then live adapt in game.</h1>
         </div>
 
-        <div className="topbar-actions">
+        <div className="topbar-actions topbar-actions-wide">
           <div className="patch-pill">
             <span>{tierOverview?.provider || buildPackage?.source?.provider || "Meta"}</span>
             <strong>{tierOverview?.patch || buildPackage?.source?.patch || "Current patch"}</strong>
           </div>
-          <button className="primary-button" type="button" onClick={() => scanLiveGame()} disabled={liveLoading}>
-            {liveLoading ? "Scanning..." : "Scan local game"}
-          </button>
+          <form
+            className="riot-lookup-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              findLiveGameByRiotId();
+            }}
+          >
+            <input
+              className="riot-id-input"
+              placeholder="TuRiotID#LAS"
+              value={riotIdInput}
+              onChange={(event) => setRiotIdInput(event.target.value)}
+            />
+            <select value={selectedPlatform} onChange={(event) => setSelectedPlatform(event.target.value)}>
+              {platforms.map((platform) => (
+                <option key={platform.value} value={platform.value}>
+                  {platform.label}
+                </option>
+              ))}
+            </select>
+            <button className="primary-button" type="submit" disabled={liveLoading}>
+              {liveLoading ? "Buscando..." : "Find live game"}
+            </button>
+          </form>
         </div>
       </section>
 

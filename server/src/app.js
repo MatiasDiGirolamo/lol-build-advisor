@@ -77,15 +77,23 @@ app.post("/api/analyze/riot", async (request, response) => {
     const snapshot = await analyzeFromRiotId({ gameName, tagLine, platform });
 
     if (!snapshot.found) {
-      response.json(snapshot);
+      response.json({
+        ...snapshot,
+        refreshIntervalMs: 120000,
+      });
       return;
     }
 
-    const analysis = buildRecommendations(snapshot);
+    const metaBuild = await getChampionBuildPackage(snapshot.player.championName).catch(
+      () => null,
+    );
+    const analysis = buildRecommendations(snapshot, metaBuild);
     const aiBrief = await maybeGenerateAiBrief(snapshot, analysis).catch(() => null);
 
     response.json({
       ...snapshot,
+      metaBuild,
+      refreshIntervalMs: 120000,
       analysis: {
         ...analysis,
         aiBrief,

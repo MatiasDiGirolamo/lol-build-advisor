@@ -69,6 +69,37 @@
   align-items: center;
 }
 
+.topbar-actions-wide {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.riot-lookup-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(160px, 0.8fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.riot-lookup-form select,
+.riot-id-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(211, 176, 106, 0.12);
+  background: rgba(2, 8, 15, 0.84);
+  color: #f3ecde;
+}
+
+.riot-lookup-form select:focus,
+.riot-id-input:focus,
+.search-box input:focus {
+  outline: none;
+  border-color: rgba(211, 176, 106, 0.32);
+  box-shadow: 0 0 0 1px rgba(211, 176, 106, 0.12);
+}
+
 .patch-pill,
 .tag-chip,
 .live-stat-bar span,
@@ -160,6 +191,7 @@
   color: #06101c;
   font-weight: 800;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .primary-button:disabled {
@@ -1187,6 +1219,10 @@
   }
 
   .tier-board {
+    grid-template-columns: 1fr;
+  }
+
+  .riot-lookup-form {
     grid-template-columns: 1fr;
   }
 
