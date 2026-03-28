@@ -1,0 +1,12 @@
+{
+  "name": "lol-build-advisor",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "build": "npm --prefix client run build"
+  }
+}
