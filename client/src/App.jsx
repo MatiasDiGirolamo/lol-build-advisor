@@ -548,7 +548,7 @@ function App() {
   }, [liveAvailable, liveQuery, liveResult?.refreshIntervalMs]);
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell app-shell--${viewMode}`}>
       <header className="app-header">
         <div className="header-brand">
           <p className="eyebrow">Draft companion</p>
@@ -603,7 +603,7 @@ function App() {
       {buildError && viewMode === "champions" ? <div className="feedback-banner error">{buildError}</div> : null}
 
       {viewMode === "home" ? (
-        <section className="page-grid">
+        <section className="page-grid home-page-grid">
           <div className="home-hero-grid">
             <section className="shell-card profile-snapshot-card">
               <div className="snapshot-head">
@@ -649,7 +649,7 @@ function App() {
       ) : null}
 
       {viewMode === "player" ? (
-        <section className="page-grid">
+        <section className="page-grid player-page-grid">
           {playerProfile ? (
             <>
               <section className="shell-card player-hero-card">
@@ -734,7 +734,8 @@ function App() {
       ) : null}
 
       {viewMode === "champions" ? (
-        <section className="champion-lab-shell">
+        <section className="page-grid champion-page-grid">
+          <div className="champion-lab-shell">
           <aside className="shell-card champion-rail">
             <div className="card-heading"><p>Champion pool</p><h3>Champion lab</h3></div>
             <label className="search-box">
@@ -813,6 +814,7 @@ function App() {
                 </section>
               </>
             ) : null}
+          </div>
           </div>
         </section>
       ) : null}

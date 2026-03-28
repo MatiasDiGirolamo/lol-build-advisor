@@ -1,12 +1,12 @@
-@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Sora:wght@400;500;600;700;800&display=swap");
 
 :root {
-  font-family: "Manrope", "Segoe UI", sans-serif;
+  font-family: "Sora", "Trebuchet MS", sans-serif;
   color: #f3ecde;
   background:
-    radial-gradient(circle at top left, rgba(201, 168, 95, 0.16), transparent 26%),
+    radial-gradient(circle at top left, rgba(201, 168, 95, 0.18), transparent 26%),
     radial-gradient(circle at top right, rgba(74, 112, 166, 0.14), transparent 28%),
-    linear-gradient(180deg, #03060d 0%, #08111d 46%, #0d1827 100%);
+    linear-gradient(180deg, #04070d 0%, #07111d 44%, #0a1624 100%);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -27,6 +27,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  color: #f3ecde;
 }
 
 body::before {
@@ -50,7 +51,7 @@ select {
 h1,
 h2,
 h3 {
-  font-family: "Cinzel", Georgia, serif;
+  font-family: "Cormorant Garamond", Georgia, serif;
   font-weight: 600;
   color: #f3ecde;
 }
