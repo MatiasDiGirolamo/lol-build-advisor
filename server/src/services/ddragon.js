@@ -167,6 +167,10 @@ export function getSummonerAssetUrl(version, imageFull) {
   return `https://ddragon.leagueoflegends.com/cdn/${version}/img/spell/${imageFull}`;
 }
 
+export function getProfileIconAssetUrl(version, profileIconId) {
+  return `https://ddragon.leagueoflegends.com/cdn/${version}/img/profileicon/${profileIconId}.png`;
+}
+
 export function getRuneAssetUrl(iconPath) {
   return iconPath
     ? `https://ddragon.leagueoflegends.com/cdn/img/${iconPath}`

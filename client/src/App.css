@@ -1319,3 +1319,372 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+.shell-card {
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(211, 176, 106, 0.14);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+    rgba(5, 11, 19, 0.84);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.22);
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.header-brand h1 {
+  margin: 8px 0 0;
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 0.92;
+}
+
+.header-brand span {
+  display: block;
+  margin-top: 10px;
+  max-width: 60ch;
+  color: rgba(243, 236, 222, 0.7);
+}
+
+.header-meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.view-tabs {
+  display: inline-grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.view-tab {
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(211, 176, 106, 0.14);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+    rgba(5, 11, 19, 0.84);
+  color: #f3ecde;
+}
+
+.view-tab.is-active {
+  border-color: rgba(211, 176, 106, 0.34);
+  background:
+    linear-gradient(180deg, rgba(67, 92, 129, 0.35), rgba(255, 255, 255, 0.02)),
+    rgba(5, 11, 19, 0.94);
+}
+
+.view-tab:disabled {
+  opacity: 0.45;
+}
+
+.search-panel {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.search-panel-copy h3 {
+  margin: 6px 0 0;
+  font-size: 1.2rem;
+}
+
+.search-panel-copy span {
+  display: block;
+  margin-top: 8px;
+  color: rgba(243, 236, 222, 0.7);
+}
+
+.secondary-button {
+  padding: 12px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(211, 176, 106, 0.14);
+  background: rgba(8, 17, 30, 0.92);
+  color: #f3ecde;
+  font-weight: 700;
+}
+
+.secondary-button:disabled {
+  opacity: 0.6;
+}
+
+.page-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.home-hero-grid,
+.player-grid,
+.champion-lab-shell,
+.champion-dashboard {
+  display: grid;
+  gap: 14px;
+}
+
+.home-hero-grid {
+  grid-template-columns: minmax(0, 1.1fr) minmax(340px, 0.9fr);
+}
+
+.player-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.profile-snapshot-card,
+.player-hero-card {
+  display: grid;
+  gap: 14px;
+}
+
+.snapshot-head {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.snapshot-head img {
+  width: 78px;
+  height: 78px;
+  border-radius: 18px;
+  border: 1px solid rgba(211, 176, 106, 0.24);
+}
+
+.snapshot-head h2,
+.snapshot-head h3 {
+  margin: 6px 0 0;
+}
+
+.snapshot-head span {
+  display: block;
+  margin-top: 6px;
+  color: rgba(243, 236, 222, 0.7);
+}
+
+.snapshot-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.snapshot-stats div,
+.queue-card,
+.mastery-tile,
+.favorite-champion-row,
+.match-row {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(2, 9, 16, 0.5);
+}
+
+.snapshot-stats small,
+.queue-card p,
+.match-core-stats small,
+.match-meta small {
+  display: block;
+  color: rgba(243, 236, 222, 0.62);
+}
+
+.intro-steps,
+.queue-grid,
+.favorite-champion-list,
+.mastery-grid,
+.match-list {
+  display: grid;
+  gap: 10px;
+}
+
+.intro-steps article {
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(2, 9, 16, 0.5);
+}
+
+.intro-steps span {
+  display: block;
+  margin-top: 6px;
+  color: rgba(243, 236, 222, 0.72);
+}
+
+.queue-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin-top: 12px;
+}
+
+.queue-card h4 {
+  margin: 8px 0 6px;
+}
+
+.queue-card span {
+  display: block;
+  color: rgba(243, 236, 222, 0.7);
+}
+
+.queue-card strong {
+  display: block;
+  margin-top: 8px;
+}
+
+.favorite-champion-row,
+.match-champion {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+}
+
+.favorite-champion-row img,
+.mastery-tile img,
+.match-champion img {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+}
+
+.favorite-champion-row span,
+.match-champion span {
+  display: block;
+  margin-top: 4px;
+  color: rgba(243, 236, 222, 0.68);
+}
+
+.favorite-champion-row small {
+  margin-left: auto;
+  color: #d3b06a;
+}
+
+.mastery-grid {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.mastery-tile {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  text-align: left;
+}
+
+.mastery-tile span,
+.mastery-tile small {
+  color: rgba(243, 236, 222, 0.68);
+}
+
+.recent-matches-card {
+  grid-column: 1 / -1;
+}
+
+.match-row {
+  display: grid;
+  grid-template-columns: minmax(0, 220px) minmax(0, 140px) minmax(0, 1fr) 120px;
+  gap: 12px;
+  align-items: center;
+}
+
+.match-row.is-win {
+  border: 1px solid rgba(90, 194, 140, 0.18);
+}
+
+.match-row.is-loss {
+  border: 1px solid rgba(219, 96, 96, 0.18);
+}
+
+.match-core-stats strong {
+  display: block;
+}
+
+.match-core-stats span,
+.match-meta span {
+  display: block;
+  margin-top: 4px;
+  color: rgba(243, 236, 222, 0.75);
+}
+
+.champion-lab-shell {
+  grid-template-columns: 308px minmax(0, 1fr);
+  align-items: start;
+}
+
+.champion-main-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.champion-hero-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  background:
+    linear-gradient(90deg, rgba(4, 10, 18, 0.94), rgba(4, 10, 18, 0.68)),
+    var(--panel-splash, linear-gradient(135deg, rgba(10, 22, 36, 0.94), rgba(18, 41, 68, 0.8)));
+  background-position: center;
+  background-size: cover;
+}
+
+.champion-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at right top, rgba(211, 176, 106, 0.08), transparent 28%),
+    linear-gradient(90deg, rgba(4, 8, 16, 0.85), rgba(4, 8, 16, 0.45));
+}
+
+.champion-hero-content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.champion-dashboard {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.live-page-grid .player-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.empty-state-card,
+.empty-inline {
+  color: rgba(243, 236, 222, 0.72);
+}
+
+@media (max-width: 1260px) {
+  .home-hero-grid,
+  .player-grid,
+  .champion-lab-shell,
+  .champion-dashboard,
+  .live-page-grid .player-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .match-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-header,
+  .header-meta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .view-tabs {
+    width: 100%;
+    grid-template-columns: repeat(4, minmax(90px, 1fr));
+    overflow-x: auto;
+  }
+
+  .snapshot-head,
+  .favorite-champion-row,
+  .match-champion {
+    align-items: flex-start;
+  }
+}

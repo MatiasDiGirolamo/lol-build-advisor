@@ -10,7 +10,7 @@ import {
 import { getTierListOverview } from "./services/metaTierProvider.js";
 import { analyzeFromLiveClient } from "./services/liveClientApi.js";
 import { buildRecommendations } from "./services/recommendationEngine.js";
-import { analyzeFromRiotId } from "./services/riotApi.js";
+import { analyzeFromRiotId, getPlayerProfileByRiotId } from "./services/riotApi.js";
 import { hasValidRiotApiKey } from "./utils/env.js";
 import { RequestError } from "./utils/http.js";
 
@@ -165,6 +165,32 @@ app.get(
     }
   },
 );
+
+app.post("/api/player-profile", rateLimit({ windowMs: 60_000, maxRequests: 20 }), async (request, response) => {
+  try {
+    const { gameName, tagLine, platform } = request.body || {};
+
+    if (
+      !gameName ||
+      !tagLine ||
+      !platform ||
+      String(gameName).length > 32 ||
+      String(tagLine).length > 10
+    ) {
+      response.status(400).json({
+        message: "Necesito gameName, tagLine y platform validos.",
+      });
+      return;
+    }
+
+    const data = await getPlayerProfileByRiotId({ gameName, tagLine, platform });
+    response.json(data);
+  } catch (error) {
+    response.status(500).json({
+      message: getPublicErrorMessage(error, "No pude cargar el perfil del jugador."),
+    });
+  }
+});
 
 app.post("/api/analyze/riot", rateLimit({ windowMs: 60_000, maxRequests: 30 }), async (request, response) => {
   try {
