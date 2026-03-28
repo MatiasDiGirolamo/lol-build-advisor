@@ -1,0 +1,3 @@
+# Replace this file with the verification token Riot provides during production review.
+# Example:
+# riot-api-verification=your-token-here

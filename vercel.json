@@ -29,6 +29,18 @@
       "dest": "/public/icons.svg"
     },
     {
+      "src": "/privacy",
+      "dest": "/public/privacy.html"
+    },
+    {
+      "src": "/terms",
+      "dest": "/public/terms.html"
+    },
+    {
+      "src": "/riot.txt",
+      "dest": "/public/riot.txt"
+    },
+    {
       "src": "/(.*)",
       "dest": "/public/index.html"
     }

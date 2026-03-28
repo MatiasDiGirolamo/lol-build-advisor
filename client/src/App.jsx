@@ -895,6 +895,18 @@ function App() {
           </section>
         ) : <section className="shell-card empty-state-card"><h3>Live game</h3><span>Usá `Find live game` cuando ya estés en partida para abrir esta vista.</span></section>
       ) : null}
+
+      <footer className="app-footer">
+        <div>
+          <strong>Draft Companion</strong>
+          <span>Player hub, champion lab y live war room para League of Legends.</span>
+        </div>
+        <div className="footer-links">
+          <a href="/privacy">Privacy Policy</a>
+          <a href="/terms">Terms of Service</a>
+          <a href="/riot.txt">riot.txt</a>
+        </div>
+      </footer>
     </main>
   );
 }
