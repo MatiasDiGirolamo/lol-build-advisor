@@ -2,6 +2,13 @@ import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 
 import "./App.css";
 
 const ROLE_ORDER = ["Top", "Jungle", "Mid", "Bot", "Support"];
+const ROLE_DISPLAY_LABELS = {
+  Top: "Top",
+  Jungle: "Jungle",
+  Mid: "Mid",
+  Bot: "ADC",
+  Support: "Support",
+};
 const VIEW_TABS = [
   { id: "home", label: "Home" },
   { id: "player", label: "Player" },
@@ -233,11 +240,12 @@ function RiotLookupSuggestions({ suggestions, favorites, selectedId, onSelect, o
 
 function LaneColumn({ lane, entries, onSelectChampion }) {
   const featuredEntries = ((entries || []).filter((entry) => entry.tier === "S").length ? (entries || []).filter((entry) => entry.tier === "S") : entries || []).slice(0, 5);
+  const displayLane = ROLE_DISPLAY_LABELS[lane] || lane;
 
   return (
     <section className="shell-card lane-card">
       <div className="lane-card-head">
-        <p>{lane}</p>
+        <p>{displayLane}</p>
         <h3>{featuredEntries.some((entry) => entry.tier === "S") ? "S Tier" : "Meta picks"}</h3>
       </div>
       <div className="tier-list">

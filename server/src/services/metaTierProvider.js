@@ -18,6 +18,33 @@ const ROLE_LABELS = {
   SUPPORT: "Support",
 };
 
+const ADC_CHAMPION_IDS = new Set([
+  "Aphelios",
+  "Ashe",
+  "Caitlyn",
+  "Corki",
+  "Draven",
+  "Ezreal",
+  "Jhin",
+  "Jinx",
+  "KaiSa",
+  "Kalista",
+  "KogMaw",
+  "Lucian",
+  "MissFortune",
+  "Nilah",
+  "Samira",
+  "Senna",
+  "Sivir",
+  "Smolder",
+  "Tristana",
+  "Twitch",
+  "Varus",
+  "Vayne",
+  "Xayah",
+  "Zeri",
+]);
+
 function getDynamicEntries(state) {
   return Object.values(state?.lolState?.apollo?.dynamic || {});
 }
@@ -56,6 +83,10 @@ function sortRoleEntries(entries) {
 
     return (right.pickRate || 0) - (left.pickRate || 0);
   });
+}
+
+function isTraditionalAdc(champion) {
+  return champion.tags?.includes("Marksman") || ADC_CHAMPION_IDS.has(champion.id);
 }
 
 export async function getTierListOverview() {
@@ -116,6 +147,10 @@ export async function getTierListOverview() {
     });
 
     for (const roleEntry of roleEntries) {
+      if (roleEntry.lane === "Bot" && !isTraditionalAdc(champion)) {
+        continue;
+      }
+
       roles[roleEntry.lane].push({
         id: champion.id,
         key: champion.key,
