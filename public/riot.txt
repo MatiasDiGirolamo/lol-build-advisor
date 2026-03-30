@@ -1,3 +1,1 @@
-# Replace this file with the verification token Riot provides during production review.
-# Example:
-# riot-api-verification=your-token-here
+9df053d3-b8e8-4558-b426-520e9e162210
