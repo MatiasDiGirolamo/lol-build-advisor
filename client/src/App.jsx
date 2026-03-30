@@ -32,7 +32,7 @@ async function requestJson(url, options) {
         normalizedText.includes("<!doctype")
           ? "La app recibio HTML en lugar de JSON. Proba con Ctrl+F5."
           : normalizedText.startsWith("The deploy")
-            ? "La deploy de Vercel todavia se esta acomodando. Refresca en unos segundos."
+            ? "La aplicaci?n todav?a se est? actualizando. Refresc? en unos segundos."
             : "El servidor devolvio una respuesta invalida.",
       );
     }
@@ -599,12 +599,6 @@ function App() {
         onToggleFavorite={toggleFavoriteRiotSearch}
       />
 
-      {healthData ? (
-        <div className="feedback-banner diagnostic-banner">
-          Deploy {healthData.deployment?.env || "-"} · commit {healthData.deployment?.commit || "-"} · Riot key fp {healthData.riotKeyFingerprint || "missing"}
-        </div>
-      ) : null}
-
       {profileError ? <div className="feedback-banner error">{profileError}</div> : null}
       {liveError ? <div className="feedback-banner error">{liveError}</div> : null}
       {tierError ? <div className="feedback-banner">{tierError}</div> : null}
@@ -618,7 +612,7 @@ function App() {
                 {playerProfile?.player?.profileIconUrl ? <img src={playerProfile.player.profileIconUrl} alt={playerProfile.player.riotId} loading="lazy" /> : null}
                 <div>
                   <p className="eyebrow">Player snapshot</p>
-                  <h3>{playerProfile?.player?.riotId || "No player selected"}</h3>
+                  <h3>{playerProfile?.player?.riotId || "Select a player"}</h3>
                   <span>
                     {playerProfile?.ranked?.primary
                       ? `${playerProfile.ranked.primary.label} · ${playerProfile.ranked.primary.tierText} · ${playerProfile.ranked.primary.lp} LP`
@@ -636,7 +630,7 @@ function App() {
             <section className="shell-card home-intro-card">
               <div className="card-heading">
                 <p>Flow</p>
-                <h3>How to use it</h3>
+                <h3>Flow</h3>
               </div>
               <div className="intro-steps">
                 <article><strong>1. Load profile</strong><span>Mirá ranked, champion pool, win rate reciente y últimas partidas.</span></article>
@@ -720,7 +714,7 @@ function App() {
                 </section>
 
                 <section className="shell-card recent-matches-card">
-                  <div className="card-heading"><p>Recent games</p><h3>Latest matches</h3></div>
+                  <div className="card-heading"><p>Recent games</p><h3>Recent matches</h3></div>
                   <div className="match-list">
                     {(playerProfile.recentMatches || []).length ? playerProfile.recentMatches.map((match) => (
                       <article className={`match-row ${match.result === "Win" ? "is-win" : "is-loss"}`} key={match.matchId}>
@@ -737,7 +731,7 @@ function App() {
                 </section>
               </div>
             </>
-          ) : <section className="shell-card empty-state-card"><h3>Cargá un perfil para abrir el player hub.</h3><span>La búsqueda trae ranked, champ pool, maestrías y últimas partidas.</span></section>}
+          ) : <section className="shell-card empty-state-card"><h3>Cargá un perfil para abrir el player hub.</h3><span>La búsqueda trae ranked, champion pool, maestrías y últimas partidas.</span></section>}
         </section>
       ) : null}
 
@@ -785,7 +779,7 @@ function App() {
               </div>
             </section>
 
-            {buildLoading ? <div className="feedback-banner">Loading build...</div> : null}
+            {buildLoading ? <div className="feedback-banner">Loading champion build...</div> : null}
             {currentBuildPackage && activeBuild ? (
               <>
                 <div className="build-tab-row">
@@ -909,7 +903,7 @@ function App() {
       <footer className="app-footer">
         <div>
           <strong>Draft Companion</strong>
-          <span>Player hub, champion lab y live war room para League of Legends.</span>
+          <span>Profile hub, champion lab y live war room para League of Legends.</span>
         </div>
         <div className="footer-links">
           <a href="/privacy">Privacy Policy</a>
@@ -922,3 +916,4 @@ function App() {
 }
 
 export default App;
+
